@@ -12,6 +12,10 @@ app.use(bodyParser.json());
 const router = express.Router();
 app.use("/api", router);
 
+router.get("/", (req, res) => {
+  res.send("<h1>Code Execution</h1>");
+});
+
 router.post("/run", async (req, res) => {
   const { lang = "cpp", code, input } = req.body;
 
@@ -27,7 +31,7 @@ router.post("/run", async (req, res) => {
     let output;
 
     if (lang === "cpp") {
-      output = await compileAndRunCpp(filePath, inputPath, );jobId
+      output = await compileAndRunCpp(filePath, inputPath, jobId);
     } else if (lang === "python") {
       output = await executePython(filePath, inputPath);
     } else if (lang === "javascript") {

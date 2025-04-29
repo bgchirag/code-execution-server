@@ -1,3 +1,4 @@
+const os = require("os");
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
@@ -8,11 +9,17 @@ if (!fs.existsSync(outputPath)) {
 }
 
 const compileAndRunCpp = async (filePath, inputPath, jobId) => {
-  const executablePath = path.join(outputPath, `${jobId}.exe`);
+  const isWindows = os.platform() === "win32";
+
+  const executablePath = isWindows
+    ? path.join(outputPath, `${jobId}.exe`)
+    : path.join(outputPath, `${jobId}`);
 
   const compileCommand = `g++ ${filePath} -o ${executablePath}`;
 
-  const runCommand = `cd ${outputPath} && .\\${jobId}.exe < ${inputPath}`;
+  const runCommand = isWindows
+    ? `cd ${outputPath} && .\\${jobId}.exe < ${inputPath}`
+    : `cd ${outputPath} && ./${jobId} < ${inputPath}`;
 
   return new Promise((resolve, reject) => {
     exec(compileCommand, (compileError, compileStdout, compileStderr) => {

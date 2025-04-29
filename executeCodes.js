@@ -2,6 +2,7 @@ const os = require("os");
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
+const { deleteFile } = require("./deleteFile");
 
 const outputPath = path.join(__dirname, "outputs");
 if (!fs.existsSync(outputPath)) {
@@ -22,7 +23,7 @@ const compileAndRunCpp = async (filePath, inputPath, jobId) => {
     : `cd ${outputPath} && ./${jobId} < ${inputPath}`;
 
   return new Promise((resolve, reject) => {
-    exec(compileCommand, (compileError, compileStdout, compileStderr) => {
+    exec(compileCommand, {timeout: 5000}, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject({ error: compileError, stderr: compileStderr });
       }
@@ -31,6 +32,7 @@ const compileAndRunCpp = async (filePath, inputPath, jobId) => {
       }
 
       exec(runCommand, (runError, stdout, stderr) => {
+        deleteFile(executablePath);
         if (runError) {
           return reject({ error: runError, stderr });
         }
@@ -45,12 +47,12 @@ const compileAndRunCpp = async (filePath, inputPath, jobId) => {
 
 const executePython = async (filePath, inputPath) => {
   return new Promise((resolve, reject) => {
-    exec(`python3 ${filePath} < ${inputPath}`, (error, stdout, stderror) => {
+    exec(`python3 ${filePath} < ${inputPath}`, {timeout: 5000}, (error, stdout, stderror) => {
       if (error) {
         reject({ error, stderror });
       }
       if (stderror) {
-        reject(stderror);
+        return reject({ stderr: stderror });
       }
       resolve(stdout);
     });
@@ -59,13 +61,14 @@ const executePython = async (filePath, inputPath) => {
 
 const executeJavaScript = async (filePath, inputPath) => {
   return new Promise((resolve, reject) => {
-    exec(`node ${filePath} < ${inputPath}`, (error, stdout, stderror) => {
+    exec(`node ${filePath} < ${inputPath}`, {timeout: 5000}, (error, stdout, stderror) => {
       if (error) {
         reject({ error, stderror });
       }
-      if (stderror) {
-        reject(stderror);
-      }
+     if (stderror) {
+       return reject({ stderr: stderror });
+     }
+
       resolve(stdout);
     });
   });

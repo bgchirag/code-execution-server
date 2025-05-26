@@ -9,7 +9,7 @@ const rateLimiter = require("express-rate-limit");
 
 const limiter = rateLimiter({
   windowMs: 1 * 60 * 1000,
-  max: 10,
+  max: 50,
   handler: (req, res) => {
     return res
       .status(429)
@@ -74,6 +74,50 @@ router.post("/run", async (req, res) => {
     deleteFile(inputPath);
   }
 });
+
+router.post("/submit", async (req, res) => {
+  const { lang = "cpp", code, input } = req.body;
+
+  if (code === undefined) {
+    return res.status(400).json({ success: false, error: "Empty code body!" });
+  }
+
+  if(containsForbiddenPatterns(code, lang)) {
+    return res.status(403).json({ success: false, error: "Code contains forbidden patterns!" });
+  };
+
+
+  const jobId = uuid.v4();
+  const filePath = await generateFile(lang, code, jobId);
+  const inputPath = await generateInputFile(input, jobId);
+
+  try {
+    let output;
+
+    if (lang === "cpp") {
+      output = await compileAndRunCpp(filePath, inputPath, jobId);
+    } else if (lang === "python") {
+      output = await executePython(filePath, inputPath);
+    } else if (lang === "javascript") {
+      output = await executeJavaScript(filePath, inputPath);
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, error: "Unsupported language!" });
+    }
+
+    console.log(`Output: ${output}`);
+    
+    res.status(200).json({ output });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ success: false, error: e.message });
+  } finally {
+    deleteFile(filePath);
+    deleteFile(inputPath);
+  }
+});
+
 
 app.listen(port, () => {
   console.log(`Code execution server running on port ${port}`);
